@@ -1,0 +1,34 @@
+name: Continuous Integration
+
+on:
+  push:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  JFROG_CLI_BUILD_NAME: ${{ github.event.repository.name }}
+  JFROG_CLI_BUILD_NUMBER: ${{ github.run_id }}
+  JFROG_DOCKER_REGISTRY: pasxregistry.jfrog.io
+  JF_URL: https://pasxregistry.jfrog.io
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: jfrog/setup-jfrog-cli@b9a85a8dfa67aef7ce92daefbc2736a4e01fb1aa
+        env:
+          JF_PROJECT: "pxtst"
+        with:
+          oidc-provider-name: kphs-dp-github-oidc-configuration
+          oidc-audience: kphs-pasx-mes-github
+      - uses: actions/checkout@6d193bf28034eafb982f37bd894289fe649468fc
+      - name: Build Docker image
+        run: jfrog docker build -t ${{ env.JFROG_DOCKER_REGISTRY }}/pxtst-docker-dev/alpine:latest .
+      - name: Push Docker image
+        run: jfrog docker push ${{ env.JFROG_DOCKER_REGISTRY }}/pxtst-docker-dev/alpine:latest
+      - name: Publish build info      
+        run: |
+          jfrog rt bag
+          jfrog rt bp
